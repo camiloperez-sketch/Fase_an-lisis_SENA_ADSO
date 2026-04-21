@@ -1,0 +1,6 @@
+{
+  "name": "B1 ESL Exam Simulator",
+  "description": "Un simulador de examen para nivel B1 con generación aleatoria de preguntas sobre gramática y comprensión de lectura.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
