@@ -21,6 +21,37 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
   const [isFinished, setIsFinished] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
+
+  const getExplanation = async () => {
+    if (!currentQ) return;
+    setExplaining(true);
+    setExplanation(null);
+    try {
+      const response = await fetch("/api/explain-grammar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: currentQ.text,
+          options: currentQ.options,
+          correctAnswer: currentQ.correctAnswer,
+          category: currentQ.category
+        })
+      });
+      const data = await response.json();
+      setExplanation(data.explanation);
+    } catch (e) {
+      console.error("Agent error", e);
+      setExplanation("Vaya, parece que mi conexión falló. ¡Pero tú puedes hacerlo!");
+    } finally {
+      setExplaining(false);
+    }
+  };
+
+  useEffect(() => {
+    setExplanation(null); // Reset explanation when moving questions
+  }, [currentIndex]);
 
   const startQuiz = async () => {
     setLoading(true);
@@ -205,7 +236,7 @@ export default function App() {
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col gap-2">
                 <Layout className="w-6 h-6 text-indigo-600" />
                 <span className="text-[10px] uppercase tracking-widest font-black text-slate-400">Total Preguntas</span>
-                <span className="text-2xl font-black text-slate-800">15</span>
+                <span className="text-2xl font-black text-slate-800">20</span>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col gap-2">
                 <Clock className="w-6 h-6 text-indigo-600" />
@@ -239,6 +270,36 @@ export default function App() {
   }
 
   const currentQ = questions[currentIndex];
+
+  const GrammarAgent = () => (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] mt-8 relative group"
+    >
+      <div className="absolute -top-3 -left-3 bg-white p-2 rounded-full shadow-sm border border-indigo-100">
+        <div className="bg-indigo-600 p-1.5 rounded-lg">
+          <Languages className="w-4 h-4 text-white" />
+        </div>
+      </div>
+      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+        Grammar Agent
+        {explaining && <span className="flex gap-1 h-1 items-end"><span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></span><span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce delay-75"></span><span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce delay-150"></span></span>}
+      </h4>
+      <div className="text-sm text-indigo-900 leading-relaxed font-medium">
+        {explaining ? "Analizando la regla..." : (explanation || "¿Necesitas ayuda con esta regla de tercera persona?")}
+      </div>
+      {!explanation && !explaining && (
+        <button 
+          onClick={getExplanation}
+          className="mt-4 text-[10px] font-black text-white bg-indigo-600 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2"
+        >
+          Pedir Explicación
+          <ChevronRight className="w-3 h-3" />
+        </button>
+      )}
+    </motion.div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
@@ -391,6 +452,8 @@ export default function App() {
                     );
                   })}
                 </div>
+
+                {currentQ?.category !== 'reading' && <GrammarAgent />}
               </motion.div>
             </AnimatePresence>
           </div>
