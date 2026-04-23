@@ -20,18 +20,29 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
   const [isFinished, setIsFinished] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const startQuiz = async () => {
     setLoading(true);
+    setErrorMsg(null);
+    setQuestions([]); // Clear existing
     try {
       const data = await generateExamQuestions();
-      setQuestions(data);
-      setCurrentIndex(0);
-      setAnswers({});
-      setTimeLeft(3600);
-      setIsFinished(false);
+      if (Array.isArray(data) && data.length > 0) {
+        setQuestions(data);
+        setCurrentIndex(0);
+        setAnswers({});
+        setTimeLeft(3600);
+        setIsFinished(false);
+      } else {
+        console.error("Empty data received:", data);
+        setErrorMsg("El servidor no devolvió preguntas. Por favor, revisa los Logs de tu función en Netlify.");
+        setCurrentIndex(-1); // Force back to intro
+      }
     } catch (error) {
       console.error("Error generating quiz", error);
+      setErrorMsg("Error de conexión. Asegúrate de haber configurado GEMINI_API_KEY en Netlify.");
+      setCurrentIndex(-1); // Force back to intro
     } finally {
       setLoading(false);
     }
@@ -174,6 +185,18 @@ export default function App() {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight">EXAM SIMULATOR B1</h1>
+            
+            {errorMsg && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mb-8 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-bold flex items-center gap-3"
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                {errorMsg}
+              </motion.div>
+            )}
+
             <p className="text-lg text-slate-500 mb-12 leading-relaxed max-w-sm mx-auto font-medium">
               Practica con preguntas generadas en tiempo real para el Módulo de Certificación de Idiomas.
             </p>

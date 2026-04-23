@@ -22,39 +22,61 @@ async function startServer() {
 
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
-      const prompt = `Generate a set of 15 English practice questions for B1 level students.
-      The set MUST include:
-      - 10 Grammar/Vocabulary questions focused on Present Simple (third person singular, questions, negatives) and Verb To Be. These should be Multiple Choice with 4 options.
-      - 5 Reading Comprehension questions based on ONE short passage. These should be True/False questions.
-      
-      Format the output as a JSON array of objects. 
-      Important: ensure natural spoken English style. Avoid simple repetitive patterns.`;
+      const prompt = `Generate 10 English practice questions for B1 level.
+      - 7 Grammar/Vocabulary (Present Simple & Verb To Be)
+      - 3 Reading Comprehension (Short passage)
+      Output format: JSON array of objects.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              required: ["id", "type", "text", "options", "correctAnswer", "category"],
-              properties: {
-                id: { type: Type.STRING },
-                type: { type: Type.STRING },
-                text: { type: Type.STRING },
-                options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                correctAnswer: { type: Type.STRING },
-                category: { type: Type.STRING },
-                readingContext: { type: Type.STRING }
+      let questions = [];
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                required: ["id", "type", "text", "options", "correctAnswer", "category"],
+                properties: {
+                  id: { type: Type.STRING },
+                  type: { type: Type.STRING },
+                  text: { type: Type.STRING },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  correctAnswer: { type: Type.STRING },
+                  category: { type: Type.STRING },
+                  readingContext: { type: Type.STRING }
+                }
               }
             }
           }
-        }
-      });
+        });
+        questions = JSON.parse(response.text || "[]");
+      } catch (aiError) {
+        console.error("AI Error in server.ts, using fallback:", aiError);
+        questions = [
+          {
+            id: "f1",
+            type: "multiple-choice",
+            text: "Actually, he _______ to the gym every morning before work.",
+            options: ["go", "goes", "is go", "going"],
+            correctAnswer: "goes",
+            category: "grammar"
+          },
+          {
+            id: "f2",
+            type: "true-false",
+            readingContext: "Emily is a freelance photographer. She works from home and loves traveling.",
+            text: "Emily works in a bank.",
+            options: ["True", "False"],
+            correctAnswer: "False",
+            category: "reading"
+          }
+        ];
+      }
 
-      res.json(JSON.parse(response.text || "[]"));
+      res.json(questions);
     } catch (error) {
       console.error("AI Generation Error:", error);
       res.status(500).json({ error: "Failed to generate questions" });

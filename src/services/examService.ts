@@ -12,11 +12,14 @@ export async function generateExamQuestions(): Promise<QuizQuestion[]> {
   try {
     const response = await fetch("/api/generate-exam");
     if (!response.ok) {
-      throw new Error("Failed to fetch from server");
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Server API error:", errorData);
+      throw new Error("Failed to fetch questions from server");
     }
-    return await response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
   } catch (e) {
-    console.error("Failed to generate questions via server", e);
+    console.error("Failed to generate questions via API", e);
     return [];
   }
 }
